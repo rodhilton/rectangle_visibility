@@ -6,7 +6,6 @@ import org.apache.commons.lang.StringUtils
 
 class TerminalInterface {
     private static int NAME_LENGTH=15
-    private static String lastDisplay=""
     private static char[] SPINNER=['|','-','\\','|','/','-','\\']
 
     public static void launchInterface(AppState appState, PrintStream out = System.out, boolean newLines) {

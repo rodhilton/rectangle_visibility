@@ -82,12 +82,9 @@ public class Gui {
             @Override
             void mouseMoved(MouseEvent mouseEvent) {
                 if (panel.currentDiagram != null && appState.hover) {
-                    //Rescale the x and y appropriately, then ask if any rectangle is highlighted
-                    double x = mouseEvent.x / (1.0 * panel.width)
-                    double y = 1.0 - (mouseEvent.y / (1.0 * panel.height))
 
                     //We subtract one from currRect because we want to be able to highlight whatever we can "see" meaning see through the topmost rect
-                    int highlighted = panel.currentDiagram.getTopRectangleNumberContaining(x, y, appState.currRect - 1)
+                    int highlighted = panel.currentDiagram.getTopRectangleNumberContaining(mouseEvent.x, mouseEvent.y, panel.width, panel.height, appState.currRect - 1)
                     appState.updateHighlighted(highlighted)
                 }
             }
@@ -154,7 +151,7 @@ public class Gui {
             @Override
             void updateState(AppState state) {
                 if(!scrollBar.enabled || state.maxRect > scrollBar.maximum + 1) {
-                    scrollBar.setValues(appState.maxRect, 1, 1, appState.maxRect + 1)
+                    scrollBar.setValues(appState.maxRect-1, 1, 1, appState.maxRect + 1)
                     scrollBar.enabled = true
                 }
                 if (state.completed) {

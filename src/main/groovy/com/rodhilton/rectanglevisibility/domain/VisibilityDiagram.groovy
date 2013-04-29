@@ -2,7 +2,6 @@ package com.rodhilton.rectanglevisibility.domain
 
 import com.rodhilton.metaheuristics.algorithms.MetaheuristicAlgorithm
 import com.rodhilton.metaheuristics.collections.ScoredSet
-import com.rodhilton.rectanglevisibility.domain.Rectangle
 
 import java.awt.*
 import java.awt.image.BufferedImage
@@ -129,12 +128,13 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         return RectUtils.printRectangles((Rectangle[]) rects.toArray())
     }
 
-    public BufferedImage render(int imageWidth, int imageHeight, int rectCount = rects.size(), int highlightRect = -1) {
+    public BufferedImage render(int imageWidth, int imageHeight, int rectCount = rects.size(), int highlightRect = -1, Color background=new Color(1f,1f,1f,1f)) {
         BufferedImage image = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
 
         Graphics2D graphics = image.createGraphics()
         //Draw background white
-        graphics.setPaint(new Color(1f, 1f, 1f));
+        //graphics.setPaint(new Color(1f, 1f, 1f,0f));
+        graphics.setPaint(background)
         graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
 
         float hueGapSize = 1 / ((float) rects.size())
@@ -144,16 +144,13 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         }
 
         for (int i = 0; i < rectCount; i++) {
-            int paddingX = RENDER_PADDING*imageWidth
-            int paddingY = RENDER_PADDING*imageHeight
-            def (int scaleWidth, int scaleHeight, int scaleX, int scaleY) = getScaledRect(i, imageWidth-paddingX*2, imageHeight-paddingY*2)
-            scaleX = scaleX+paddingX
-            scaleY = scaleY+paddingY
+            def (int scaleWidth, int scaleHeight, int scaleX, int scaleY) = getScaledRect(i, imageWidth, imageHeight)
 
             //This is nearly impossible to explain, basically we don't want to go straight up the hues array, because overlapping
             //colors will be too close.  We effectively want to ping-pong back and forth, from the first to the middle, then the first
             //plus one, middle plus one, etc.  This formula does that, surprisingly.
-            final float hue = hues[((i*(int)(size/2))+(int)(1-(size%2)/2))%size]
+            //final float hue = hues[((i*(int)(size/2))+(int)(1-(size%2)/2))%size]
+            final float hue = hues[i]
             final float saturation = 0.7f;
             final float luminance = 0.7f;
             final Color color = Color.getHSBColor(hue, saturation, luminance);
@@ -210,18 +207,29 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         return image
     }
 
-    public int getTopRectangleNumberContaining(double x, double y, int maxLevel) {
+    public int getTopRectangleNumberContaining(int x, int y, int width, int height, int maxLevel) {
         for (int i = maxLevel - 1; i >= 0; i--) {
-            Rectangle rectangle = rects[i]
-            if (rectangle.contains(x, y)) {
+            if(rectContains(i, width, height, x, y)) {
                 return i;
             }
+
         }
 
         //If nothing else is considered the top rectangle, but the actual top rectangle contains the point, use that
-        if (rects[maxLevel].contains(x, y)) return maxLevel
+        if(rectContains(maxLevel, width, height, x, y)) {
+            return maxLevel;
+        }
 
         return -1;
+    }
+
+    private boolean rectContains(int i, int width, int height, int x, int y) {
+        def (int scaleWidth, int scaleHeight, int scaleX, int scaleY) = getScaledRect(i, width, height)
+
+        if (x > scaleX && x < scaleX + scaleWidth && y > scaleY && y < scaleY + scaleHeight) {
+            return true;
+        }
+        return false
     }
 
     private boolean isFreeCornerBetween(Rectangle a, Rectangle b, List<Rectangle> inbetween) {
@@ -282,16 +290,23 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
     }
 
     private List getScaledRect(int i, int imageWidth, int imageHeight) {
+        int paddingX = RENDER_PADDING*imageWidth
+        int paddingY = RENDER_PADDING*imageHeight
+
+        int paddedWidth = imageWidth-paddingX*2
+        int paddedHeight = imageHeight-paddingY*2
+
         Rectangle rect = rects[i]
         double x = (size-rect.west) / ((double) (size * 2) + 1)
         double y = (size-rect.north) / ((double) (size * 2) + 1)
         double width = (rect.east + rect.west + 1) / ((double) (size * 2) + 1)
         double height = (rect.north + rect.south + 1) / ((double) (size * 2) + 1)
 
-        int scaleX = x * imageWidth
-        int scaleY = y * imageHeight
-        int scaleWidth = width * imageWidth
-        int scaleHeight = height * imageHeight
+        int scaleX = x * paddedWidth +paddingX
+        int scaleY = y * paddedHeight +paddingY
+        int scaleWidth = width * paddedWidth
+        int scaleHeight = height * paddedHeight
+
         [scaleWidth, scaleHeight, scaleX, scaleY]
     }
 }

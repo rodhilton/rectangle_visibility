@@ -237,13 +237,13 @@ class Executive {
         }
 
         String server = null
-        while (server == null || server.trim() == "") {
-            println("Enter the server to connect to:")
+        while (server == null) {
+            println("Enter the server to connect to (blank for standalone mode):")
             print("> ")
             BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
             server = bufferRead.readLine().trim();
         }
 
-        start(size, name, "client", server, true, System.currentTimeMillis(), false)
+        start(size, name, server.trim() == "" ? "standalone" : "client", server, true, System.currentTimeMillis(), false)
     }
 }

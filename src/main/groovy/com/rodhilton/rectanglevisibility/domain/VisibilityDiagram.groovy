@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage
 import java.util.List
 
 class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<VisibilityDiagram> {
-    static final long serialVersionUID = 51L;
+    static final long serialVersionUID = 58L;
 
     private int size
     private Random random

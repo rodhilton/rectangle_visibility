@@ -20,13 +20,13 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         this.size = size
         this.rects = new ArrayList<Rectangle>(size)
 
-        rects.add(new Rectangle(north: size, east: size, south: size, west: size))
+        rects.add(new Rectangle(north: 1.0, east: 1.0, south: 1.0, west: 1.0))
 
         for (int i = 1; i < size-1; i++) {
-            int north = random.nextInt(size) + 1
-            int east = random.nextInt(size) + 1
-            int west = random.nextInt(size) + 1
-            int south = random.nextInt(size) + 1
+            double north = random.nextDouble()
+            double east =  random.nextDouble()
+            double west =  random.nextDouble()
+            double south =  random.nextDouble()
 
             rects.add(new Rectangle(
                 north: north,
@@ -36,7 +36,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             ))
         }
 
-        rects.add(new Rectangle(north: size, east: size, south: size, west: size))
+        rects.add(new Rectangle(north: 1.0, east: 1.0, south: 1.0, west: 1.0))
     }
 
     protected VisibilityDiagram(int size, Random random, List<Rectangle> rects) {
@@ -118,7 +118,8 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         sb.append(" { \n")
         for (int i = rects.size() - 1; i >= 0; i--) {
             Rectangle rect = rects[i]
-            sb.append("   ${sprintf('%02d', i + 1)}: (${rect.east}, ${rect.north}, ${rect.west}, ${rect.south})\n")
+            def (int east, int north, int west, int south) = normalizedValues(rect)
+            sb.append("   ${sprintf('%02d', i + 1)}: (${east}, ${north}, ${west}, ${south})\n")
         }
 
         sb.append(" } \n")
@@ -271,16 +272,16 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
 
         switch (whichDimension) {
             case 0: //north
-                mutating.setNorth(random.nextInt(size)+1)
+                mutating.setNorth(random.nextDouble())
                 break;
             case 1: //east
-                mutating.setEast(random.nextInt(size)+1)
+                mutating.setEast(random.nextDouble())
                 break;
             case 2: //south
-                mutating.setSouth(random.nextInt(size)+1)
+                mutating.setSouth(random.nextDouble())
                 break;
             case 3: //west
-                mutating.setWest(random.nextInt(size)+1)
+                mutating.setWest(random.nextDouble())
                 break;
         }
 
@@ -297,10 +298,12 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         int paddedHeight = imageHeight-paddingY*2
 
         Rectangle rect = rects[i]
-        double x = (size-rect.west) / ((double) (size * 2) + 1)
-        double y = (size-rect.north) / ((double) (size * 2) + 1)
-        double width = (rect.east + rect.west + 1) / ((double) (size * 2) + 1)
-        double height = (rect.north + rect.south + 1) / ((double) (size * 2) + 1)
+        def (int east, int north, int west, int south) = normalizedValues(rect)
+        double x = (size-west) / ((double) (size * 2) + 1)
+        double y = (size-north) / ((double) (size * 2) + 1)
+        double width = (east + west + 1) / ((double) (size * 2) + 1)
+        double height = (north + south + 1) / ((double) (size * 2) + 1)
+
 
         int scaleX = x * paddedWidth +paddingX
         int scaleY = y * paddedHeight +paddingY
@@ -308,5 +311,25 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         int scaleHeight = height * paddedHeight
 
         [scaleWidth, scaleHeight, scaleX, scaleY]
+    }
+
+
+    //THE CAKE IS A LIE
+    //Storing as doubles and then normalizing for output purposes forces the values to be unique
+    //Which seems to improve performance slightly, even if it is a lie (since the values used are not actually ints <= size
+    private List normalizedValues(Rectangle rect) {
+        BigDecimal e = 1D*rect.east
+        BigDecimal n = 1D*rect.north
+        BigDecimal w = 1D*rect.west
+        BigDecimal s = 1D*rect.south
+
+        if(e == 1D || n == 1D || w == 1D || s==1D) return [size-1, size-1,size-1,size-1]
+
+        def easts = rects[1..-2].collect{ 1D*it.east }.sort()
+        def norths = rects[1..-2].collect{ 1D*it.north }.sort()
+        def wests  = rects[1..-2].collect{1D*it.west }.sort()
+        def souths = rects[1..-2].collect{ 1D*it.south }.sort()
+
+        [easts.indexOf(1D*rect.east)+1, norths.indexOf(1D*rect.north)+1, wests.indexOf(1D*rect.west)+1, souths.indexOf(1D*rect.south)+1]
     }
 }

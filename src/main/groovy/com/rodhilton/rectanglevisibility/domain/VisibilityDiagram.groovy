@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage
 import java.util.List
 
 class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<VisibilityDiagram> {
-    static final long serialVersionUID = 51L;
+    static final long serialVersionUID = 57L;
 
     private int size
     private Random random
@@ -37,6 +37,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         }
 
         rects.add(new Rectangle(north: size, east: size, south: size, west: size))
+        this.normalize()
     }
 
     protected VisibilityDiagram(int size, Random random, List<Rectangle> rects) {
@@ -97,6 +98,9 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         VisibilityDiagram child1 = new VisibilityDiagram(size, random, parent1Bottom + parent2Top)
         VisibilityDiagram child2 = new VisibilityDiagram(size, random, parent2Bottom + parent1Top)
 
+        child1.normalize()
+        child2.normalize()
+
         int mutations = scoredGeneration.size() / 2
 
         List<VisibilityDiagram> child1Offspring = []
@@ -132,8 +136,6 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         BufferedImage image = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
 
         Graphics2D graphics = image.createGraphics()
-        //Draw background white
-        //graphics.setPaint(new Color(1f, 1f, 1f,0f));
         graphics.setPaint(background)
         graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
 
@@ -254,8 +256,11 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
                 fcsecount == inbetween.size()
     }
 
+
+    //TODO: this code is clunky and overly slow.  It can be fixed.
     private VisibilityDiagram mutate() {
-        int whichRect = random.nextInt(size-2)+1;
+        int whichRect1 = random.nextInt(size-2)+1;
+        int whichRect2 = random.nextInt(size-2)+1;
         int whichDimension = random.nextInt(4);
         List<Rectangle> copyRects = new ArrayList<Rectangle>()
         for (Rectangle rectToCopy : rects) {
@@ -267,24 +272,34 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             )
             copyRects.add(newRect);
         }
-        Rectangle mutating = copyRects[whichRect]
+        Rectangle mutating1 = copyRects[whichRect1]
+        Rectangle mutating2 = copyRects[whichRect2]
 
         switch (whichDimension) {
             case 0: //north
-                mutating.setNorth(random.nextInt(size)+1)
+                int temp = mutating1.north
+                mutating1.north = mutating2.north
+                mutating2.north = temp
                 break;
             case 1: //east
-                mutating.setEast(random.nextInt(size)+1)
+                int temp = mutating1.east
+                mutating1.east = mutating2.east
+                mutating2.east = temp
                 break;
             case 2: //south
-                mutating.setSouth(random.nextInt(size)+1)
+                int temp = mutating1.south
+                mutating1.south = mutating2.south
+                mutating2.south = temp
                 break;
             case 3: //west
-                mutating.setWest(random.nextInt(size)+1)
+                int temp = mutating1.west
+                mutating1.west = mutating2.west
+                mutating2.west = temp
                 break;
         }
 
-        copyRects.set(whichRect, mutating)
+        copyRects.set(whichRect1, mutating1)
+        copyRects.set(whichRect2, mutating2)
 
         return new VisibilityDiagram(size, random, copyRects)
     }
@@ -308,5 +323,79 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         int scaleHeight = height * paddedHeight
 
         [scaleWidth, scaleHeight, scaleX, scaleY]
+    }
+
+    /**
+     * This is a bit of a strange method.  Basically, after performing an operation such as recombination or initialization, there is no guarantee
+     * that each "east" in all of the easts of all of the rectangles is unique.  Rectangle 5 might have an east of 10 and Rectangle 9 might have an east of 10.
+     * However, we ideally want each set of rectangles to have their own unique values for east, north, west, and south, within the dimension.
+     * To accomplish this, we "normalize" the directions.  This essentially figures out what each rectangle has for its dimension value by comparing them all
+     * to each other.
+     *
+     * Implementation-wise, it sorts the lists of rectangles (the inside ones, since the top and bottom are always full) into 4 sorted lists, each sorted by its value
+     * for that dimension of E, N, W, S.  Then each rectangle checks its location in the sorted list, and treats that location as its new value for that dimension.
+     *
+     * So these four rectangles (we're only looking at east for simplicity)
+     *
+     * 1: (1, *, *, *)
+     * 2: (3, *, *, *)
+     * 3: (2, *, *, *)
+     * 4: (2, *, *, *)
+     *
+     * We see that rectangles 3 and 4 have a value of 2.  We want them to have unique values, which means that the 3 of rectangle 2 needs to be pushed up to 4 to make room for rectangles 3 and 4 to use values of 2 and 3.
+     * This method accomplishes that, by sorting into an "east list" like so:
+     *
+     * 1: (1, *, *, *)
+     * 3: (2, *, *, *)
+     * 4: (2, *, *, *)
+     * 2: (3, *, *, *)
+     *
+     * Then each east is re-assigned to each rectangle according to where the rectangle is in the list, treating the first element as 1.
+     *
+     * Rectangle 1 is 1st in the list, so its new east is 1.
+     * Rectangle 2 is 4th in the list, so its new east is 4.
+     * Rectangle 3 is 2nd in the list, so its new east is 2.
+     * Rectangle 4 is 3rd in the list, so its new east is 3.
+     *
+     * We are thus left with
+     *
+     * 1: (1, *, *, *)
+     * 2: (4, *, *, *)
+     * 3: (2, *, *, *)
+     * 4: (3, *, *, *)
+     *
+     * As desired.
+     *
+     * Ties are broken at random.
+     */
+    private void normalize() {
+
+        def easts  = rectsSortedBy {it.east}
+        def norths  = rectsSortedBy {it.north}
+        def wests  = rectsSortedBy {it.west}
+        def souths  = rectsSortedBy {it.south}
+
+        for(int i=1;i<size-1;i++) {
+            Rectangle rect = rects[i]
+            int east = easts.indexOf(rect)
+            int north = norths.indexOf(rect)
+            int west = wests.indexOf(rect)
+            int south = souths.indexOf(rect)
+            rects[i] = new Rectangle(north: north+1, east: east+1, west: west+1, south: south+1)
+        }
+
+    }
+
+    private rectsSortedBy(Closure part) {
+        rects.sort(false, new Comparator<Rectangle>() {
+
+            @Override
+            int compare(Rectangle left, Rectangle right) {
+                def l = part(left)
+                def r = part(right)
+                if(l == r) return random.nextBoolean() ? -1 : 1
+                l <=> r
+            }
+        })
     }
 }

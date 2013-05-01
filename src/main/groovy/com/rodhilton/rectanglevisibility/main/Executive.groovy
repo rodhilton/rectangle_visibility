@@ -144,7 +144,7 @@ class Executive {
                 VisibilityDiagram get() {
                     return new VisibilityDiagram(size, random);
                 }
-            })
+            }, 250)
 
             def pauseListener = new AppStateListener() {
                 @Override

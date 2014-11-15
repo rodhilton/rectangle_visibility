@@ -174,7 +174,7 @@ class Executive {
             def supplier = new Supplier<VisibilityDiagram>() {
                 @Override
                 VisibilityDiagram get() {
-                    return new VisibilityDiagram(size, random);
+                    return new VisibilityDiagram(size, random, 0.05);
                 }
             }
 
@@ -209,7 +209,15 @@ class Executive {
                 @Override
                 void call(ScoredSet<VisibilityDiagram> everything) {
                     VisibilityDiagram best = everything.getBest()
+                    int fitness = best.fitness()
                     appState.updateDiagram(best, generation.incrementAndGet(), name)
+
+                    def dir = new File("log")
+                    dir.mkdirs()
+                    File file = new File(dir, "f_"+fitness+".txt").withWriter { out ->
+                        out.print(best.toString())
+                    }
+
                 }
             }
 

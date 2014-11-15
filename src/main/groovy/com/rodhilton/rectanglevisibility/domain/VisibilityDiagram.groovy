@@ -14,8 +14,10 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
     private Random random
     private List<Rectangle> rects;
     private final double RENDER_PADDING=0.05
+    private double mutationRate
 
-    public VisibilityDiagram(int size, Random random) {
+    public VisibilityDiagram(int size, Random random, double mutationRate) {
+        this.mutationRate = mutationRate
         this.random = random
         this.size = size
         this.rects = new ArrayList<Rectangle>(size)
@@ -40,7 +42,8 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         this.normalize()
     }
 
-    protected VisibilityDiagram(int size, Random random, List<Rectangle> rects) {
+    protected VisibilityDiagram(int size, Random random, double mutationRate, List<Rectangle> rects) {
+        this.mutationRate = mutationRate
         this.size = size
         this.random = random
         this.rects = rects
@@ -95,8 +98,8 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         def parent1Top = parents[0].rects[pivot + 1..-1]
         def parent2Top = parents[1].rects[pivot + 1..-1]
 
-        VisibilityDiagram child1 = new VisibilityDiagram(size, random, parent1Bottom + parent2Top)
-        VisibilityDiagram child2 = new VisibilityDiagram(size, random, parent2Bottom + parent1Top)
+        VisibilityDiagram child1 = new VisibilityDiagram(size, random, mutationRate, parent1Bottom + parent2Top)
+        VisibilityDiagram child2 = new VisibilityDiagram(size, random, mutationRate, parent2Bottom + parent1Top)
 
         child1.normalize()
         child2.normalize()
@@ -111,7 +114,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             child2Offspring << child2.mutate()
         }
 
-        def things = child1Offspring + child2Offspring[0..-2] + scoredGeneration.getBest()
+        def things = child1Offspring + child2Offspring[0..-1]
         return things
     }
 
@@ -259,49 +262,62 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
 
     //TODO: this code is clunky and overly slow.  It can be fixed.
     private VisibilityDiagram mutate() {
-        int whichRect1 = random.nextInt(size-2)+1;
-        int whichRect2 = random.nextInt(size-2)+1;
-        int whichDimension = random.nextInt(4);
+//        int whichRect1 = random.nextInt(size-2)+1;
+//        int whichRect2 = random.nextInt(size-2)+1;
+//        int whichDimension = random.nextInt(4);
         List<Rectangle> copyRects = new ArrayList<Rectangle>()
-        for (Rectangle rectToCopy : rects) {
+
+        copyRects.add(rects.get(0))
+        for (Rectangle rectToCopy : rects.subList(1, size - 1)) {
             Rectangle newRect = new Rectangle(
-                    north: rectToCopy.north,
-                    east: rectToCopy.east,
-                    south: rectToCopy.south,
-                    west: rectToCopy.west,
+                    north: random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rectToCopy.north,
+                    east: random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rectToCopy.east,
+                    south: random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rectToCopy.south,
+                    west: random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rectToCopy.west,
             )
             copyRects.add(newRect);
         }
-        Rectangle mutating1 = copyRects[whichRect1]
-        Rectangle mutating2 = copyRects[whichRect2]
 
-        switch (whichDimension) {
-            case 0: //north
-                int temp = mutating1.north
-                mutating1.north = mutating2.north
-                mutating2.north = temp
-                break;
-            case 1: //east
-                int temp = mutating1.east
-                mutating1.east = mutating2.east
-                mutating2.east = temp
-                break;
-            case 2: //south
-                int temp = mutating1.south
-                mutating1.south = mutating2.south
-                mutating2.south = temp
-                break;
-            case 3: //west
-                int temp = mutating1.west
-                mutating1.west = mutating2.west
-                mutating2.west = temp
-                break;
-        }
+        copyRects.add(rects.get(size-1))
+//        Rectangle mutating1 = copyRects[whichRect1]
+//        Rectangle mutating2 = copyRects[whichRect2]
 
-        copyRects.set(whichRect1, mutating1)
-        copyRects.set(whichRect2, mutating2)
+//        for(Rectangle rect: copyRects) {
+//            rect.north = random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rect.north
+//            rect.east = random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rect.east
+//            rect.south = random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rect.south
+//            rect.west = random.nextDouble() <= mutationRate ? random.nextInt(size) + 1 : rect.west
+//
+//
+//        }
+//
+//        switch (whichDimension) {
+//            case 0: //north
+//                int temp = mutating1.north
+//                mutating1.north = mutating2.north
+//                mutating2.north = temp
+//                break;
+//            case 1: //east
+//                int temp = mutating1.east
+//                mutating1.east = mutating2.east
+//                mutating2.east = temp
+//                break;
+//            case 2: //south
+//                int temp = mutating1.south
+//                mutating1.south = mutating2.south
+//                mutating2.south = temp
+//                break;
+//            case 3: //west
+//                int temp = mutating1.west
+//                mutating1.west = mutating2.west
+//                mutating2.west = temp
+//                break;
+//        }
+//
+//        copyRects.set(whichRect1, mutating1)
+//        copyRects.set(whichRect2, mutating2)
 
-        return new VisibilityDiagram(size, random, copyRects)
+        return new VisibilityDiagram(size, random, mutationRate, copyRects)
     }
 
     private List getScaledRect(int i, int imageWidth, int imageHeight) {

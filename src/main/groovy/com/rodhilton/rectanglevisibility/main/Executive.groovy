@@ -10,6 +10,7 @@ import com.rodhilton.rectanglevisibility.gui.TerminalInterface
 import com.rodhilton.rectanglevisibility.network.DiagramMessage
 import com.rodhilton.rectanglevisibility.network.MessageReceiver
 import com.rodhilton.rectanglevisibility.network.MessageSender
+import com.rodhilton.rectanglevisibility.util.VisibilityDiagramSerializer
 import net.sourceforge.argparse4j.ArgumentParsers
 import net.sourceforge.argparse4j.impl.Arguments
 import net.sourceforge.argparse4j.inf.ArgumentParser
@@ -77,9 +78,15 @@ class Executive {
                 .action(Arguments.storeTrue())
                 .help("Turn debugging verbosity on")
 
-        //TODO: option for resume from file or log (but not for server mode)
-        //TODO: option for automatic saving (and how large the log should be)
+        parser.addArgument("--resume")
+                .dest("resume")
+                .type(FileInputStream.class)
+                .help("Resume simulation from a file")
 
+        parser.addArgument("--save")
+                .dest("save")
+                .type(PrintStream.class)
+                .help("Saves simulation to a file while running")
 
         try {
             Namespace res = parser.parseArgs(args);
@@ -89,18 +96,32 @@ class Executive {
                 throw new ArgumentParserException("Must provide a server address running in client or server mode", parser);
             }
 
+            if(res.get("resume")!=null && !(res.getString("mode") == "client" || res.getString("mode") == "standalone")) {
+                throw new ArgumentParserException("Can only resume from a file in client or standalone mode", parser);
+            }
+
             //Somehow groovy's regex engine is different than what I'm expecting via ruby.  False negatives galore
 //            if (!(/((?:localhost)|(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))(?:\:(\d{2,6}))?/ =~ res.get("server"))) {
 //                throw new ArgumentParserException("Provided server address is not valid", parser);
 //            }
 
-            start(res.getInt("size"), res.getString("name"), res.getString("mode"), res.getString("server"), res.getBoolean("gui"), res.getLong("seed"), res.getBoolean("verbose"))
+            start(
+                    res.getInt("size"),
+                    res.getString("name"),
+                    res.getString("mode"),
+                    res.getString("server"),
+                    res.getBoolean("gui"),
+                    res.getLong("seed"),
+                    res.getBoolean("verbose"),
+                    (FileInputStream)res.get("resume"),
+                    (PrintStream)res.get("save")
+            )
         } catch (ArgumentParserException e) {
             parser.handleError(e);
         }
     }
 
-    public static start(int size, String name, String mode, String server, boolean gui, long seed, boolean verbose) {
+    public static start(int size, String name, String mode, String server, boolean gui, long seed, boolean verbose, FileInputStream resumeFrom, PrintStream saveTo) {
         final AppState appState = new AppState();
         appState.currRect = size
         appState.maxRect = size
@@ -132,6 +153,17 @@ class Executive {
             appState.register(debuggingListener)
         }
 
+        if(saveTo) {
+            def saveListener = new AppStateListener() {
+
+                @Override
+                void updateState(AppState state) {
+                    saveTo.print(state.diagram.toString())
+                }
+            }
+            appState.register(saveListener)
+        }
+
         if (mode == "server") {
             MessageReceiver networkReciever = new MessageReceiver(server, size)
             networkReciever.startReceive(appState)
@@ -139,12 +171,25 @@ class Executive {
             Random random = new Random(seed)
             log.info("Random seed: ${seed}")
 
-            final Simulator simulator = new Simulator(new Supplier<VisibilityDiagram>() {
+            def supplier = new Supplier<VisibilityDiagram>() {
                 @Override
                 VisibilityDiagram get() {
                     return new VisibilityDiagram(size, random);
                 }
-            }, 250)
+            }
+
+            if(resumeFrom != null) {
+                def stuff = resumeFrom.text
+                def diagram = VisibilityDiagramSerializer.deserialize(stuff)
+                supplier = new Supplier<VisibilityDiagram>() {
+                    @Override
+                    VisibilityDiagram get() {
+                        return diagram
+                    }
+                }
+            }
+
+            final Simulator simulator = new Simulator(supplier)
 
             def pauseListener = new AppStateListener() {
                 @Override
@@ -244,6 +289,6 @@ class Executive {
             server = bufferRead.readLine().trim();
         }
 
-        start(size, name, server.trim() == "" ? "standalone" : "client", server, true, System.currentTimeMillis(), false)
+        start(size, name, server.trim() == "" ? "standalone" : "client", server, true, System.currentTimeMillis(), false, null, null)
     }
 }

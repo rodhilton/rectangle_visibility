@@ -214,7 +214,7 @@ class Executive {
 
                     def dir = new File("log")
                     dir.mkdirs()
-                    File file = new File(dir, "f_"+fitness+".txt").withWriter { out ->
+                    File file = new File(dir, "f_k"+size+"_e"+fitness+".txt").withWriter { out ->
                         out.print(best.toString())
                     }
 

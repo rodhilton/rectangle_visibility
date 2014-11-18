@@ -115,6 +115,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         }
 
         def things = child1Offspring + child2Offspring[0..-1]
+//        def things = child1Offspring + child2Offspring[0..-2] + scoredGeneration.getBest()
         return things
     }
 
@@ -148,7 +149,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             hues[i] = i * hueGapSize
         }
 
-        for (int i = 0; i < rectCount; i++) {
+        for (int i = 0; i < rects.size(); i++) {
             def (int scaleWidth, int scaleHeight, int scaleX, int scaleY) = getScaledRect(i, imageWidth, imageHeight)
 
             //This is nearly impossible to explain, basically we don't want to go straight up the hues array, because overlapping
@@ -163,7 +164,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             graphics.setColor(color)
 
             //Top rectangle should be somewhat transparent, all others much less so
-            int innerOpacity = (i == rectCount - 1) ? 192 : 255
+            int innerOpacity = (i >= rectCount - 1) ? 32 : 255
             graphics.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), innerOpacity))
             graphics.fillRect(scaleX, scaleY, scaleWidth, scaleHeight)
             int extraThickness = (i == rectCount - 1) ? 1 : 0
@@ -187,8 +188,8 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             }
         }
 
-        if (highlightRect > -1) {
-            def (int scaleWidth, int scaleHeight, int scaleX, int scaleY) = getScaledRect(highlightRect, imageWidth, imageHeight)
+//        if (highlightRect > -1) {
+            def (int scaleWidth, int scaleHeight, int scaleX, int scaleY) = getScaledRect(rectCount - 1, imageWidth, imageHeight)
             java.awt.Rectangle myRect = new java.awt.Rectangle(scaleX, scaleY, scaleWidth, scaleHeight);
             graphics.setColor(Color.WHITE)
             float[] dash = [10.0f];
@@ -196,18 +197,18 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
                     BasicStroke.JOIN_MITER, 10.0f, dash, 0.0f));
             graphics.draw(myRect)
 
-            Font currentFont = graphics.getFont()
-            def bigFont = new Font(currentFont.name, currentFont.style, currentFont.size * 2)
-            FontMetrics fm = graphics.getFontMetrics(bigFont)
-            String rectLabel = "${highlightRect + 1}"
-            def labelWidth = fm.stringWidth(rectLabel)
-            def labelHeight = fm.getHeight();
-            if (scaleWidth > labelWidth && scaleHeight > labelHeight) {
-                graphics.setFont(bigFont)
-                graphics.drawString(rectLabel, scaleX + (int) ((scaleWidth - labelWidth) / 2), fm.getAscent() + scaleY + (int) ((scaleHeight - labelHeight) / 2))
-                graphics.setFont(currentFont)
-            }
-        }
+//            Font currentFont = graphics.getFont()
+//            def bigFont = new Font(currentFont.name, currentFont.style, currentFont.size * 2)
+//            FontMetrics fm = graphics.getFontMetrics(bigFont)
+//            String rectLabel = "${rectCount -1}"
+//            def labelWidth = fm.stringWidth(rectLabel)
+//            def labelHeight = fm.getHeight();
+//            if (scaleWidth > labelWidth && scaleHeight > labelHeight) {
+//                graphics.setFont(bigFont)
+//                graphics.drawString(rectLabel, scaleX + (int) ((scaleWidth - labelWidth) / 2), fm.getAscent() + scaleY + (int) ((scaleHeight - labelHeight) / 2))
+//                graphics.setFont(currentFont)
+//            }
+//        }
 
         return image
     }

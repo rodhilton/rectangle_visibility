@@ -84,9 +84,14 @@ class Executive {
                 .help("Resume simulation from a file")
 
         parser.addArgument("--save")
-                .dest("save")
-                .type(PrintStream.class)
-                .help("Saves simulation to a file while running")
+            .dest("save")
+            .type(PrintStream.class)
+            .help("Saves simulation to a file while running")
+
+        parser.addArgument("--journal")
+            .dest("journal")
+            .type(String.class)
+            .help("Saves to and loads from a journal file while running")
 
         try {
             Namespace res = parser.parseArgs(args);
@@ -114,14 +119,15 @@ class Executive {
                     res.getLong("seed"),
                     res.getBoolean("verbose"),
                     (FileInputStream)res.get("resume"),
-                    (PrintStream)res.get("save")
+                    (PrintStream)res.get("save"),
+                    res.getString("journal")
             )
         } catch (ArgumentParserException e) {
             parser.handleError(e);
         }
     }
 
-    public static start(int size, String name, String mode, String server, boolean gui, long seed, boolean verbose, FileInputStream resumeFrom, PrintStream saveTo) {
+    public static start(int size, String name, String mode, String server, boolean gui, long seed, boolean verbose, FileInputStream resumeFrom, PrintStream saveTo, String journal) {
         final AppState appState = new AppState();
         appState.currRect = size
         appState.maxRect = size
@@ -191,6 +197,10 @@ class Executive {
 
             final Simulator simulator = new Simulator(supplier)
 
+            if(journal) {
+                simulator.setJournalName(journal)
+            }
+
             def pauseListener = new AppStateListener() {
                 @Override
                 void updateState(AppState state) {
@@ -203,14 +213,12 @@ class Executive {
             }
             appState.register(pauseListener)
 
-            final AtomicInteger generation = new AtomicInteger();
-
             SimulatorCallback<VisibilityDiagram> printer = new SimulatorCallback<VisibilityDiagram>() {
                 @Override
                 void call(ScoredSet<VisibilityDiagram> everything) {
                     VisibilityDiagram best = everything.getBest()
                     int fitness = best.fitness()
-                    appState.updateDiagram(best, generation.incrementAndGet(), name)
+                    appState.updateDiagram(best, simulator.getIterations(), name)
 
                     def dir = new File("log")
                     dir.mkdirs()

@@ -8,7 +8,7 @@ import java.util.List
 public class AppState {
     //Main State
     private VisibilityDiagram diagram = null //The visibility diagram itself
-    private int generationNum = 0 //What generation the simulation is up to
+    private BigInteger generationNum = 0 //What generation the simulation is up to
     String name = "" //The name of the user running the simulation
     int maxRect = 0; //The size of the diagram, as in K_{maxRect}
 
@@ -27,7 +27,7 @@ public class AppState {
 
     private List<AppStateListener> listeners = new ArrayList<AppStateListener>()
 
-    synchronized void updateDiagram(VisibilityDiagram diagram, int generationNum, String name = "") {
+    synchronized void updateDiagram(VisibilityDiagram diagram, BigInteger generationNum, String name = "") {
         this.diagram = diagram
         this.maxRect = diagram.size
         this.name = name
@@ -82,7 +82,7 @@ public class AppState {
         listeners.add(listener)
     }
 
-    synchronized int currentGeneration() {
+    synchronized BigInteger currentGeneration() {
         generationNum
     }
 

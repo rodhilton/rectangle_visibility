@@ -104,16 +104,21 @@ public class Gui {
         Rect originalRect = null
 
         def mouseAdapter = new MouseInputAdapter() {
-            //TODO: keyboard listner: up/down changes level
-
+            //Necessary
             //TODO: info panel needs "what can't see each other"
             //TODO: need some easy visual way to connect what the info panel is saying to the view
-            //TODO: remove 'hover' button, meaningless
-            //TODO: key events cant go above or below max
-
-            //TODO: can't resize to smaller than 1 width or 1 height
-            //TODO: can't move off grid area?
             //TODO: changing rectangles might not actually "take" when resuming, look into
+
+            //Useful
+            //TODO: Moving doesn't move off center OR resize
+            //TODO: can't move off grid area?
+
+            //Handy:
+            //TODO: keyboard listner: up/down changes level
+            //TODO: key events cant go above or below max
+            //TODO: remove 'hover' button, meaningless
+
+
             @Override
             void mouseMoved(MouseEvent mouseEvent) {
                 int threshold = 4
@@ -197,11 +202,11 @@ public class Gui {
                 def offsetY = Math.round(scaledY - originalScaledY)
 
                 if (movingRectangle) {
-                    //TODO: don't let this leave the origin point
-                    moveableRect.east = originalRect.east + offsetX
-                    moveableRect.west = originalRect.west - offsetX
-                    moveableRect.north = originalRect.north - offsetY
-                    moveableRect.south = originalRect.south + offsetY
+                    //TODO: don't let this leave the origin point, the math.max's are allowing a resize
+                    moveableRect.east = Math.max(1, originalRect.east + offsetX)
+                    moveableRect.west = Math.max(1, originalRect.west - offsetX)
+                    moveableRect.north = Math.max(1, originalRect.north - offsetY)
+                    moveableRect.south = Math.max(1, originalRect.south + offsetY)
                 } else {
                     if (movingEast) {
                         moveableRect.east = Math.max(1, originalRect.east + offsetX)
@@ -215,7 +220,10 @@ public class Gui {
                     }
                 }
 
-                panel.repaint()
+//                panel.repaint()
+                if(!moveableRect.equals(originalRect)) {
+                    appState.updateMoved()
+                }
             }
 
             @Override
@@ -304,6 +312,10 @@ public class Gui {
                     playButton.setEnabled(false)
                 } else {
                     frame.setTitle(state.title)
+                }
+
+                if(state.paused) {
+                    infoArea.setText(panel.currentDiagram.diagnosticInfo)
                 }
             }
         })

@@ -30,7 +30,7 @@ class VisibilityDiagramSerializer {
 
     }
 
-    static VisibilityDiagram deserialize(String fileContents) {
+    static VisibilityDiagram deserialize(String fileContents, double mutationRate) {
         def matcher = fileContents =~ /(?mis)Rectangle Visibility Diagram on (\d+) rectangles with (\d+) edges.*\{(.*)\}/
         int size = matcher[0][1].toInteger()
         def rectLines = matcher[0][3].trim().split("\n")
@@ -48,7 +48,7 @@ class VisibilityDiagramSerializer {
             }
         }
 
-        VisibilityDiagram diagram = new VisibilityDiagram(size, new Random(), rects)
+        VisibilityDiagram diagram = new VisibilityDiagram(size, new Random(), mutationRate, rects)
         diagram
     }
 

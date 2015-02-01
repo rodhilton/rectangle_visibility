@@ -114,8 +114,8 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             child2Offspring << child2.mutate()
         }
 
-        def things = child1Offspring + child2Offspring[0..-1]
-//        def things = child1Offspring + child2Offspring[0..-2] + scoredGeneration.getBest()
+//        def things = child1Offspring + child2Offspring[0..-1]
+        def things = child1Offspring + child2Offspring[0..-2] + scoredGeneration.getBest()
         return things
     }
 
@@ -431,5 +431,16 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
 
     Rectangle getRect(int i) {
         return rects.get(i);
+    }
+
+    String getDiagnosticInfo() {
+        def (List visiblePairs, List invisiblePairs) = getPairs()
+        StringBuilder sb = new StringBuilder()
+        sb.append("Invisible Pairs:\n")
+        for(Object pair: invisiblePairs) {
+            def pairMap = pair as Map
+            sb.append(" ("+pairMap.bottomIndex+", "+pairMap.topIndex+")\n")
+        }
+        return sb.toString()
     }
 }

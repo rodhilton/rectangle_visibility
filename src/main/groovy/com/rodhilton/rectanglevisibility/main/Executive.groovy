@@ -186,7 +186,7 @@ class Executive {
 
             if(resumeFrom != null) {
                 def stuff = resumeFrom.text
-                def diagram = VisibilityDiagramSerializer.deserialize(stuff)
+                def diagram = VisibilityDiagramSerializer.deserialize(stuff, 0.02)
                 supplier = new Supplier<VisibilityDiagram>() {
                     @Override
                     VisibilityDiagram get() {

@@ -15,6 +15,7 @@ public class AppState {
     //Status
     boolean completed = false  //Simulation completed
     boolean paused = false //Simulation paused (likely via UI)
+    boolean altered = false
 
     //UI Specific
     String title = "" //Title of the client, arguable UI specific
@@ -46,12 +47,20 @@ public class AppState {
         notifyListeners()
     }
 
+    synchronized void updateMoved() {
+        altered = true
+        notifyListeners()
+    }
+
     synchronized void updateHighlighted(int highlightRect) {
         this.highlightRect = highlightRect
         notifyListeners()
     }
 
     synchronized void updatePaused(boolean paused) {
+        if(!paused) { //unpaused, reset the moved bool
+            this.altered=false
+        }
         this.paused = paused
         notifyListeners()
     }

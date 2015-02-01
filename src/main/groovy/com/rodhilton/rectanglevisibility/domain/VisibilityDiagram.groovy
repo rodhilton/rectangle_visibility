@@ -321,7 +321,20 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         return new VisibilityDiagram(size, random, mutationRate, copyRects)
     }
 
-    private List getScaledRect(int i, int imageWidth, int imageHeight) {
+    public List<Double> convertPoint(Point mousePoint, int imageWidth, int imageHeight) {
+        int paddingX = RENDER_PADDING*imageWidth
+        int paddingY = RENDER_PADDING*imageHeight
+
+        int paddedWidth = imageWidth-paddingX*2
+        int paddedHeight = imageHeight-paddingY*2
+
+        double maybeX = ((mousePoint.getX() - paddingX) / paddedWidth) * ((double) (size * 2) + 1)
+        double maybeY = ((mousePoint.getY() - paddingY) / paddedHeight) * ((double) (size * 2) + 1)
+
+        return [maybeX, maybeY]
+    }
+
+    public List getScaledRect(int i, int imageWidth, int imageHeight) {
         int paddingX = RENDER_PADDING*imageWidth
         int paddingY = RENDER_PADDING*imageHeight
 
@@ -414,5 +427,9 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
                 l <=> r
             }
         })
+    }
+
+    Rectangle getRect(int i) {
+        return rects.get(i);
     }
 }

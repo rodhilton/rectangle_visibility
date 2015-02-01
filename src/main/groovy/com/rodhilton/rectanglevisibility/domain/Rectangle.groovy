@@ -11,4 +11,8 @@ class Rectangle implements Serializable {
     def String toString() {
         "(${east}, ${north}, ${west}, ${south})"
     }
+
+    Rectangle copy() {
+        return new Rectangle(east: east, north: north, west: west, south: south)
+    }
 }

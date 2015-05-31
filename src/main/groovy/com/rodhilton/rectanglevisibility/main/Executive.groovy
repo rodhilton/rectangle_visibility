@@ -1,9 +1,11 @@
 package com.rodhilton.rectanglevisibility.main
 
 import com.google.common.base.Supplier
+import com.rodhilton.metaheuristics.algorithms.EvolutionaryAlgorithm
 import com.rodhilton.metaheuristics.collections.ScoredSet
 import com.rodhilton.metaheuristics.simulator.Simulator
 import com.rodhilton.metaheuristics.simulator.SimulatorCallback
+import com.rodhilton.metaheuristics.util.PropUtil
 import com.rodhilton.rectanglevisibility.domain.VisibilityDiagram
 import com.rodhilton.rectanglevisibility.gui.Gui
 import com.rodhilton.rectanglevisibility.gui.TerminalInterface
@@ -20,7 +22,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import javax.swing.*
-import java.util.concurrent.atomic.AtomicInteger
+import java.security.MessageDigest
 
 class Executive {
 
@@ -174,28 +176,36 @@ class Executive {
             MessageReceiver networkReciever = new MessageReceiver(server, size)
             networkReciever.startReceive(appState)
         } else {
+            double mutationRate = PropUtil.get("judy.ga.mutationRate", "0.10").toDouble()
+
             Random random = new Random(seed)
             log.info("Random seed: ${seed}")
 
             def supplier = new Supplier<VisibilityDiagram>() {
                 @Override
                 VisibilityDiagram get() {
-                    return new VisibilityDiagram(size, random, 0.05);
+                    return new VisibilityDiagram(size, random, mutationRate);
                 }
             }
 
+            EvolutionaryAlgorithm<VisibilityDiagram> algo
+
+            //TODO: this needs to be converted, it will not currently work
             if(resumeFrom != null) {
                 def stuff = resumeFrom.text
-                def diagram = VisibilityDiagramSerializer.deserialize(stuff, 0.02)
-                supplier = new Supplier<VisibilityDiagram>() {
+                def diagram = VisibilityDiagramSerializer.deserialize(stuff, mutationRate)
+                algo = new VisibilityDiagram.VisibilityDiagramGeneticAlgorithm(size, random, mutationRate) {
                     @Override
-                    VisibilityDiagram get() {
-                        return diagram
+                    public VisibilityDiagram initialize() {
+                        return diagram;
                     }
                 }
+            } else {
+                algo = new VisibilityDiagram.VisibilityDiagramGeneticAlgorithm(size, random, mutationRate)
             }
 
-            final Simulator simulator = new Simulator(supplier)
+
+            final Simulator simulator = new Simulator(algo)
 
             if(journal) {
                 simulator.setJournalName(journal)
@@ -213,6 +223,8 @@ class Executive {
             }
             appState.register(pauseListener)
 
+            def bestLoggedFitness=0
+
             SimulatorCallback<VisibilityDiagram> printer = new SimulatorCallback<VisibilityDiagram>() {
                 @Override
                 void call(ScoredSet<VisibilityDiagram> everything) {
@@ -220,10 +232,26 @@ class Executive {
                     int fitness = best.fitness()
                     appState.updateDiagram(best, simulator.getIterations(), name)
 
+                    if(fitness > bestLoggedFitness) {
+                        bestLoggedFitness = fitness
+                    }
+
                     def dir = new File("log")
                     dir.mkdirs()
-                    File file = new File(dir, "f_k"+size+"_e"+fitness+".txt").withWriter { out ->
+
+                    def logFile = new File(dir, "f_k" + size + "_e" + fitness + ".txt")
+                    if(fitness==bestLoggedFitness) {
+                        def md5=MessageDigest.getInstance("MD5")
+                        md5.update(best.diagnosticInfo.bytes);
+                        BigInteger hash = new BigInteger(1, md5.digest());
+                        String hashFromContent = hash.toString(16);
+                        logFile = new File(dir, "f_k" + size + "_e" + fitness + "_"+hashFromContent+".txt")
+                    }
+
+                    File file = logFile.withWriter { out ->
                         out.print(best.toString())
+                        out.print("\n")
+                        out.print(best.diagnosticInfo)
                     }
 
                 }

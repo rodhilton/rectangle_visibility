@@ -1,13 +1,14 @@
 package com.rodhilton.rectanglevisibility.domain
 
-import com.rodhilton.metaheuristics.algorithms.MetaheuristicAlgorithm
+import com.rodhilton.metaheuristics.algorithms.EvolutionaryAlgorithm
 import com.rodhilton.metaheuristics.collections.ScoredSet
 
 import java.awt.*
 import java.awt.image.BufferedImage
 import java.util.List
 
-class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<VisibilityDiagram> {
+
+class VisibilityDiagram implements Serializable {
     static final long serialVersionUID = 57L;
 
     private int size
@@ -57,7 +58,7 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
         (size * (size - 1)) / 2
     }
 
-    @Override
+
     Number fitness() {
         def (List visiblePairs, List invisiblePairs) = getPairs()
         return visiblePairs.size()
@@ -84,39 +85,6 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             }
         }
         [visiblePairs, invisiblePairs]
-    }
-
-
-    @Override
-    List<VisibilityDiagram> combine(ScoredSet<VisibilityDiagram> scoredGeneration) {
-        def parents = scoredGeneration.getTop(2);
-
-        int pivot = random.nextInt(size - 1)
-
-        def parent1Bottom = parents[0].rects[0..pivot]
-        def parent2Bottom = parents[1].rects[0..pivot]
-        def parent1Top = parents[0].rects[pivot + 1..-1]
-        def parent2Top = parents[1].rects[pivot + 1..-1]
-
-        VisibilityDiagram child1 = new VisibilityDiagram(size, random, mutationRate, parent1Bottom + parent2Top)
-        VisibilityDiagram child2 = new VisibilityDiagram(size, random, mutationRate, parent2Bottom + parent1Top)
-
-        child1.normalize()
-        child2.normalize()
-
-        int mutations = scoredGeneration.size() / 2
-
-        List<VisibilityDiagram> child1Offspring = []
-        List<VisibilityDiagram> child2Offspring = []
-
-        for (int i = 0; i < mutations; i++) {
-            child1Offspring << child1.mutate()
-            child2Offspring << child2.mutate()
-        }
-
-//        def things = child1Offspring + child2Offspring[0..-1]
-        def things = child1Offspring + child2Offspring[0..-2] + scoredGeneration.getBest()
-        return things
     }
 
     @Override
@@ -442,5 +410,60 @@ class VisibilityDiagram implements Serializable, MetaheuristicAlgorithm<Visibili
             sb.append(" ("+pairMap.bottomIndex+", "+pairMap.topIndex+")\n")
         }
         return sb.toString()
+    }
+
+    static class VisibilityDiagramGeneticAlgorithm implements EvolutionaryAlgorithm<VisibilityDiagram> {
+
+        private int size
+        private Random random
+        private double mutationRate
+
+        VisibilityDiagramGeneticAlgorithm(int size, Random random, double mutationRate) {
+            this.mutationRate = mutationRate
+            this.random = random
+            this.size = size
+        }
+
+        @Override
+        VisibilityDiagram initialize() {
+            return new VisibilityDiagram(size, random, mutationRate)
+        }
+
+        @Override
+        Number fitness(VisibilityDiagram candidate) {
+            return candidate.fitness()
+        }
+
+        @Override
+        List<VisibilityDiagram> combine(ScoredSet<VisibilityDiagram> scoredGeneration) {
+            def parents = scoredGeneration.getTop(2);
+
+            int pivot = random.nextInt(size - 1)
+
+            def parent1Bottom = parents[0].rects[0..pivot]
+            def parent2Bottom = parents[1].rects[0..pivot]
+            def parent1Top = parents[0].rects[pivot + 1..-1]
+            def parent2Top = parents[1].rects[pivot + 1..-1]
+
+            VisibilityDiagram child1 = new VisibilityDiagram(size, random, mutationRate, parent1Bottom + parent2Top)
+            VisibilityDiagram child2 = new VisibilityDiagram(size, random, mutationRate, parent2Bottom + parent1Top)
+
+            child1.normalize()
+            child2.normalize()
+
+            int mutations = scoredGeneration.size() / 2
+
+            List<VisibilityDiagram> child1Offspring = []
+            List<VisibilityDiagram> child2Offspring = []
+
+            for (int i = 0; i < mutations; i++) {
+                child1Offspring << child1.mutate()
+                child2Offspring << child2.mutate()
+            }
+
+//        def things = child1Offspring + child2Offspring[0..-1]
+            def things = child1Offspring + child2Offspring[0..-2] + scoredGeneration.getBest()
+            return things
+        }
     }
 }
